@@ -1,0 +1,2 @@
+packages: quantified-constraints-type-families.cabal
+with-compiler: ghc-9.4.8
