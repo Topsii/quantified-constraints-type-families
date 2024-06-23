@@ -1,2 +1,2 @@
 packages: quantified-constraints-type-families.cabal
-with-compiler: ghc-9.6.5
+with-compiler: ghc-9.10.1

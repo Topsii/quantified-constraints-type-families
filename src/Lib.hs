@@ -71,17 +71,7 @@ newtype Flip p a b = Flip { runFlip :: p b a }
 instance Functor (->) (NatTrans (->) (->)) p => Functor (->) (->) (Flip p a) where
   fmap f = Flip . runNat (fmap @(->) @(NatTrans (->) (->)) f) . runFlip
 
-instance (Functor (->) (->) (p a)) => Functor (Flip (->)) (Flip (->)) (p a) where
-  fmap = Flip . fmap . runFlip
-
 instance Category morphism => Category (Flip morphism) where
   type ObjectConstraint (Flip morphism) = ObjectConstraint morphism
   id = Flip id
   (.) (Flip f) (Flip g) = Flip (g . f)
-
-instance 
-    ( Functor (->) (NatTrans (->) (->)) p
-    )
-    => Functor (Flip (->)) (NatTrans (Flip (->)) (Flip (->))) p
-    where
-  fmap f = Nat (Flip (runNat (fmap @(->) @(NatTrans (->) (->)) (runFlip f))))
