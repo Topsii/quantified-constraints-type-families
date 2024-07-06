@@ -4,7 +4,7 @@ on:
 name: build
 jobs:
   linux:
-    name: build - Linux
+    name: "Linux"
     runs-on: ubuntu-latest # or macOS-latest, or windows-latest
     timeout-minutes: 15
     strategy:
@@ -15,34 +15,52 @@ jobs:
           - '9.6.6'
           - '9.4.8'
         compiledMethod:
-          - 'stack build --no-install-ghc --system-ghc'
+          - 'ghc ./src/Lib.hs'
+          - 'ghci ./src/Lib.hs <<< ":q" | tee /dev/stderr | grep -q Ok'
+          - 'haddock ./src/Lib.hs'
           - 'cabal build'
+          - 'cabal repl <<< ":q" | tee /dev/stderr | grep -q Ok'
+          - 'cabal build && cabal repl <<< ":q" | tee /dev/stderr | grep -q Ok'
+          - 'cabal haddock'
+          - 'stack build --no-install-ghc --system-ghc'
+          - 'stack repl --no-install-ghc --system-ghc <<< ":q" | tee /dev/stderr | grep -q Ok'
+          - 'stack haddock --no-install-ghc --system-ghc'
+      fail-fast: false 
     steps:
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
         with:
           ghc-version: ${{ matrix.ghcVersion }}
+      - run: |
+          echo "resolver: ghc-${{ matrix.ghcVersion }}" > stack.yaml
+      - run: |
+          echo "with-compiler: ghc-${{ matrix.ghcVersion }}" >> cabal.project
       - run: ${{ matrix.compiledMethod }}
 
 
-
-
-# name: build
-# on:
-#   - push
-#   - pull_request
-# jobs:
-#   linux:
-#     name: build - Linux
-#     runs-on: ubuntu-20.04
-#     timeout-minutes: 15
-#     container: haskell:9.8.2
-#     # strategy:
-#     #   matrix:
-#     #     include:
-#     #       - image: 
-#     #       - image: haskell:9.6.5
-#     steps:
-#       - name: build
-#         run: |
-#           stack build --no-install-ghc --system-ghc --stack-root ${GITHUB_WORKSPACE}/.stack
+  windows:
+    name: "Windows"
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        ghcVersion:
+          - '9.10.1'
+          - '9.8.2'
+          - '9.6.6'
+          - '9.4.8'
+        compiledMethod:
+          - 'cabal build'
+          - 'Write-Output ":q" | cabal repl | Tee-Object -Variable Result; $Result | findstr Ok'
+          - 'cabal build ; if($?) { Write-Output ":q" | cabal repl | Tee-Object -Variable Result; $Result | findstr Ok }'
+      fail-fast: false 
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ matrix.ghcVersion }}
+      - run: |
+          echo "resolver: ghc-${{ matrix.ghcVersion }}" > stack.yaml
+      - run: |
+          echo "with-compiler: ghc-${{ matrix.ghcVersion }}" >> cabal.project
+      - run: ${{ matrix.compiledMethod }}

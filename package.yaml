@@ -1,12 +1,6 @@
 name:                quantified-constraints-type-families
 version:             0.1.0.0
 
-tested-with:
-- GHC == 9.4.8 
-- GHC == 9.6.4
-- GHC == 9.8.2
-# - GHC == 9.10.1
-
 dependencies:
 - base >= 4.7 && < 5
 
