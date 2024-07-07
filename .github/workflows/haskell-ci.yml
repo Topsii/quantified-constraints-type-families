@@ -1,66 +1,48 @@
 on:
   - push
   - pull_request
-name: build
 jobs:
-  linux:
-    name: "Linux"
-    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
-    timeout-minutes: 15
+  test:
     strategy:
       matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
         ghcVersion:
           - '9.10.1'
           - '9.8.2'
           - '9.6.6'
           - '9.4.8'
-        compiledMethod:
-          - 'ghc ./src/Lib.hs'
-          - 'ghci ./src/Lib.hs <<< ":q" | tee /dev/stderr | grep -q Ok'
-          - 'haddock ./src/Lib.hs'
-          - 'cabal build'
-          - 'cabal repl <<< ":q" | tee /dev/stderr | grep -q Ok'
-          - 'cabal build && cabal repl <<< ":q" | tee /dev/stderr | grep -q Ok'
-          - 'cabal haddock'
-          - 'stack build --no-install-ghc --system-ghc'
-          - 'stack repl --no-install-ghc --system-ghc <<< ":q" | tee /dev/stderr | grep -q Ok'
-          - 'stack haddock --no-install-ghc --system-ghc'
+        tool:
+          - 'ghc'
+          - 'cabal'
+          - 'stack'
+        include:
+          - os: ubuntu-latest
+            echoQuitReplCmd: 'echo ":q"'
+            checkInterpreter: 'tee /dev/stderr | grep -q Ok'
+          - os: windows-latest
+            echoQuitReplCmd: 'Write-Output ":q"'
+            checkInterpreter: 'Tee-Object -Variable Result; $Result | findstr Ok'
+          - tool: ghc
+            compile: 'ghc ./src/Lib.hs'
+            interpret: 'ghci ./src/Lib.hs'
+            haddock: 'haddock ./src/Lib.hs'
+          - tool: cabal
+            compile: 'cabal build'
+            interpret: 'cabal repl'
+            haddock: 'cabal haddock'
+          - tool: stack
+            compile: 'stack build --no-install-ghc --system-ghc'
+            interpret: 'stack repl --no-install-ghc --system-ghc'
+            haddock: 'stack haddock --no-install-ghc --system-ghc'
       fail-fast: false 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: haskell-actions/setup@v2
-        with:
-          ghc-version: ${{ matrix.ghcVersion }}
-      - run: |
-          echo "resolver: ghc-${{ matrix.ghcVersion }}" > stack.yaml
-      - run: |
-          echo "with-compiler: ghc-${{ matrix.ghcVersion }}" >> cabal.project
-      - run: ${{ matrix.compiledMethod }}
-
-
-  windows:
-    name: "Windows"
-    runs-on: windows-latest
-    timeout-minutes: 15
-    strategy:
-      matrix:
-        ghcVersion:
-          - '9.10.1'
-          - '9.8.2'
-          - '9.6.6'
-          - '9.4.8'
-        compiledMethod:
-          - 'cabal build'
-          - 'Write-Output ":q" | cabal repl | Tee-Object -Variable Result; $Result | findstr Ok'
-          - 'cabal build ; if($?) { Write-Output ":q" | cabal repl | Tee-Object -Variable Result; $Result | findstr Ok }'
-      fail-fast: false 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: haskell-actions/setup@v2
-        with:
-          ghc-version: ${{ matrix.ghcVersion }}
-      - run: |
-          echo "resolver: ghc-${{ matrix.ghcVersion }}" > stack.yaml
-      - run: |
-          echo "with-compiler: ghc-${{ matrix.ghcVersion }}" >> cabal.project
-      - run: ${{ matrix.compiledMethod }}
+    uses: ./.github/workflows/does-it-compile.yml
+    with:
+      os: ${{ matrix.os }}
+      echoQuitReplCmd: ${{ matrix.echoQuitReplCmd }}
+      checkInterpreter: ${{ matrix.checkInterpreter }}
+      ghcVersion: ${{ matrix.ghcVersion }}
+      compile: ${{ matrix.compile }}
+      interpret: ${{ matrix.interpret }}
+      haddock: ${{ matrix.haddock }}

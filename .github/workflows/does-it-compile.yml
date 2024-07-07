@@ -1,0 +1,56 @@
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      echoQuitReplCmd:
+        required: true
+        type: string
+      checkInterpreter:
+        required: true
+        type: string
+      ghcVersion:
+        required: true
+        type: string
+      compile:
+        required: true
+        type: string
+      interpret:
+        required: true
+        type: string
+      haddock:
+        required: true
+        type: string
+jobs:
+  build_test:
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - codeConsumeStrategy: 'build'
+            codeConsumeCmd: '${{ inputs.compile }}'
+            compileBefore: false
+          - codeConsumeStrategy: 'repl'
+            codeConsumeCmd: '${{ inputs.echoQuitReplCmd }} | ${{ inputs.interpret }} | ${{ inputs.checkInterpreter }}'
+            compileBefore: false
+          - codeConsumeStrategy: 'build & repl'
+            codeConsumeCmd: '${{ inputs.echoQuitReplCmd }} | ${{ inputs.interpret }} | ${{ inputs.checkInterpreter }}'
+            compileBefore: true
+          - codeConsumeStrategy: 'haddock'
+            codeConsumeCmd: '${{ inputs.haddock }}'
+            compileBefore: false
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ inputs.ghcVersion }}
+      - run: |
+          echo "resolver: ghc-${{ inputs.ghcVersion }}" > stack.yaml
+      - run: |
+          echo "with-compiler: ghc-${{ inputs.ghcVersion }}" >> cabal.project
+      - if: "${{ matrix.compileBefore && matrix.compileBefore != 'false' }}"
+        run: ${{ inputs.compile }}
+      - run: ${{ matrix.codeConsumeCmd }}
